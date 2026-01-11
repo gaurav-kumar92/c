@@ -1,78 +1,211 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { useEffect, useRef, useState } from "react";
+import { Game } from "@/game/Game";
+import { render } from "@/game/Renderer";
+import { Sound } from "@/game/Sound";
 
 export default function Home() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const gameRef = useRef<Game | null>(null);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const soundInitialized = useRef(false);
+  
+  // Touch state
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const MIN_SWIPE_DISTANCE = 30; // Minimum distance for a swipe to be registered
+
+  const handleRestart = () => {
+    if (gameRef.current) {
+      gameRef.current = new Game();
+      setIsGameOver(false);
+    }
+  };
+
+  const initSound = () => {
+    if (!soundInitialized.current) {
+      Sound.init();
+      soundInitialized.current = true;
+    }
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    const game = new Game();
+    gameRef.current = game;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      initSound();
+      if (!gameRef.current) return;
+      if (gameRef.current.gameOver) {
+        if (e.key === "r") handleRestart();
+        return;
+      }
+      if (e.key === "ArrowLeft") gameRef.current.moveLeft();
+      if (e.key === "ArrowRight") gameRef.current.moveRight();
+      if (e.key === "ArrowDown") gameRef.current.update(); // Speed up fall
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Prevent the browser from doing its default thing (like scrolling)
+      e.preventDefault();
+      initSound();
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+        e.preventDefault();
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      if (!touchStartX.current || !touchStartY.current || !gameRef.current) {
+        return;
+      }
+      
+      if (gameRef.current.gameOver) {
+          handleRestart();
+          return;
+      }
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+
+      const deltaX = touchEndX - touchStartX.current;
+      const deltaY = touchEndY - touchStartY.current;
+
+      touchStartX.current = null;
+      touchStartY.current = null;
+      
+      // Check for horizontal swipe
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (Math.abs(deltaX) > MIN_SWIPE_DISTANCE) {
+          if (deltaX > 0) {
+            gameRef.current.moveRight();
+          } else {
+            gameRef.current.moveLeft();
+          }
+        }
+      } 
+      // Check for vertical swipe (downwards)
+      else if (deltaY > MIN_SWIPE_DISTANCE) {
+         gameRef.current.update(); // Speed up fall
+      }
+    };
+    
+
+    window.addEventListener("keydown", handleKeyDown);
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+    canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
+
+
+    let lastTime = 0;
+    let dropCounter = 0;
+
+    const gameLoop = (time: number) => {
+      if (!gameRef.current) return;
+
+      let deltaTime = time - lastTime;
+      lastTime = time;
+
+      // Cap deltaTime to prevent large jumps
+      if (deltaTime > 100) {
+        deltaTime = 100;
+      }
+
+      const dropInterval = gameRef.current.getDropInterval();
+      dropCounter += deltaTime;
+
+      let fallProgress = dropCounter / dropInterval;
+
+      if (dropCounter > dropInterval) {
+        if (!gameRef.current.gameOver) {
+          gameRef.current.update();
+        }
+        dropCounter = 0;
+        fallProgress = 0;
+      }
+
+      gameRef.current.updateAnimations(deltaTime);
+
+      setIsGameOver(gameRef.current.gameOver);
+      render(
+        ctx,
+        gameRef.current.grid,
+        gameRef.current.activeBlock,
+        gameRef.current.row,
+        gameRef.current.col,
+        canvas,
+        gameRef.current.score,
+        gameRef.current.nextBlock,
+        gameRef.current.gameOver,
+        fallProgress,
+        gameRef.current.splashes,
+        gameRef.current.comboCount,
+        gameRef.current.level
+      );
+
+      requestAnimationFrame(gameLoop);
+    };
+
+    gameLoop(0);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", resizeCanvas);
+      canvas.removeEventListener("touchstart", handleTouchStart);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
+
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black`}
-    >
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the index.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="relative w-screen h-screen bg-slate-900">
+      <canvas ref={canvasRef} className="block w-full h-full" />
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4">
+        {isGameOver ? (
+          <button
+            onClick={handleRestart}
+            className="px-8 py-4 text-2xl font-bold text-white bg-blue-500 rounded-lg shadow-lg hover:bg-blue-600 transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs/pages/getting-started?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            Restart
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={() => {
+                initSound();
+                gameRef.current?.moveLeft();
+              }}
+              className="px-8 py-4 text-2xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors"
+            >
+              &larr;
+            </button>
+            <button
+              onClick={() => {
+                initSound();
+                gameRef.current?.moveRight();
+              }}
+              className="px-8 py-4 text-2xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors"
+            >
+              &rarr;
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
