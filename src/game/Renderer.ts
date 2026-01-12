@@ -183,7 +183,8 @@ export function render(
   comboCount: number,
   level: number,
   shakeDuration: number,
-  shakeIntensity: number
+  shakeIntensity: number,
+  onHowToPlay: () => void,
 ) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
@@ -227,6 +228,21 @@ export function render(
   }
 
   drawUIText(ctx, canvas, score, nextBlock, gameOver, comboCount, level);
+
+  if (!gameOver) {
+    const btnX = canvas.width - 150;
+    const btnY = 140;
+    const btnW = 100;
+    const btnH = 40;
+
+    ctx.fillStyle = "#334155";
+    ctx.fillRect(btnX, btnY, btnW, btnH);
+    ctx.fillStyle = "white";
+    ctx.font = "16px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("How to Play", btnX + btnW / 2, btnY + btnH / 2);
+  }
 
   ctx.restore();
 }

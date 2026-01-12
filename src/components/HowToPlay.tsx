@@ -10,7 +10,13 @@ export function HowToPlay({ onStart }: { onStart: () => void }) {
           <ul className="list-disc list-inside space-y-2">
             <li>Use the <span className="font-bold text-green-400">arrow keys</span> or <span className="font-bold text-green-400">swipe</span> to move the falling block left and right.</li>
             <li>Press the <span className="font-bold text-green-400">down arrow</span> or <span className="font-bold text-green-400">swipe down</span> to drop the block instantly.</li>
-            <li>Arrange blocks to form <span className="font-bold text-sky-400">vertical</span> or <span className="font-bold text-sky-400">horizontal</span> equations (e.g., <code className="bg-slate-700 px-1 rounded">2 + 3</code>).</li>
+            <li>Arrange blocks to form <span className="font-bold text-sky-400">vertical or horizontal</span> equations. For example: <code className="bg-slate-700 px-1 rounded">[ 2 ] [ + ] [ 3 ]</code> or</li>
+            <div className="flex flex-col items-center">
+                <code className="bg-slate-700 px-1 rounded">[ 3 ]</code>
+                <code className="bg-slate-700 px-1 rounded">[ + ]</code>
+                <code className="bg-slate-700 px-1 rounded">[ 2 ]</code>
+            </div>
+            <li>Equations are resolved from top-to-bottom or left-to-right. For subtraction and division, the order matters!</li>
             <li><span className="font-bold text-red-500">Bombs (💣)</span> will clear a 3x3 area around them.</li>
           </ul>
           <p>

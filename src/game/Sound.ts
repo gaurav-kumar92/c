@@ -6,11 +6,12 @@ export class Sound {
     if (this.audioContext) return;
     try {
       this.audioContext = new AudioContext();
-      console.log("Audio context initialized");
-      // Load both sounds
+      // Load all sounds
       await Promise.all([
         this.loadSound("splash", "/sounds/splash.mp3"),
         this.loadSound("object", "/sounds/object.mp3"),
+        this.loadSound("blast", "/sounds/blast.mp3"),
+        this.loadSound("level-up", "/sounds/level-up.mp3"),
       ]);
     } catch (e) {
       console.error("Error initializing audio context", e);
@@ -23,7 +24,6 @@ export class Sound {
       const response = await fetch(url);
       const arrayBuffer = await response.arrayBuffer();
       this.sounds[name] = await this.audioContext.decodeAudioData(arrayBuffer);
-      console.log(`Sound loaded: ${name}`);
     } catch (e) {
       console.error(`Error loading sound: ${name}`, e);
     }
@@ -31,13 +31,20 @@ export class Sound {
 
   static play(name: string) {
     if (!this.audioContext || !this.sounds[name]) {
-      console.error(`Sound not ready to play: ${name}`);
       return;
     }
+
+    const gainNode = this.audioContext.createGain();
+    if (name === 'blast') {
+      gainNode.gain.value = 0.4;
+    } else {
+      gainNode.gain.value = 1;
+    }
+
     const source = this.audioContext.createBufferSource();
     source.buffer = this.sounds[name];
-    source.connect(this.audioContext.destination);
+    source.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
     source.start(0);
-    console.log(`Playing sound: ${name}`);
   }
 }

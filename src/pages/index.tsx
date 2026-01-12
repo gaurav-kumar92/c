@@ -145,7 +145,8 @@ export default function Home() {
       render(
         ctx, game.grid, game.activeBlock, game.row, game.col, canvas,
         game.score, game.nextBlock, game.gameOver, fallProgress,
-        game.splashes, game.comboCount, game.level, game.shakeDuration, game.shakeIntensity
+        game.splashes, game.comboCount, game.level, game.shakeDuration, game.shakeIntensity,
+        () => setShowHowToPlay(true)
       );
     };
 
@@ -167,17 +168,6 @@ export default function Home() {
     <div className="relative w-screen h-screen bg-slate-900 font-sans">
       {showHowToPlay && <HowToPlay onStart={() => setShowHowToPlay(false)} />}
       <canvas ref={canvasRef} className="block w-full h-full" />
-
-      {!isGameOver && (
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={() => setShowHowToPlay(true)}
-            className="text-white bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg shadow-lg transition-colors"
-          >
-            How to Play
-          </button>
-        </div>
-      )}
 
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4">
         {isGameOver ? (

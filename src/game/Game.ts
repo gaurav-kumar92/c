@@ -129,8 +129,6 @@ export class Game {
         this.score += 50 * this.comboCount;
         this.comboCount++;
         changed = true;
-        this.shakeDuration = 150;
-        this.shakeIntensity = 5;
         if (this.score >= this.levelUpScore) {
           this.level++;
           this.levelUpScore *= 2;
