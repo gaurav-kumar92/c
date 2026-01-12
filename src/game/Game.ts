@@ -18,6 +18,10 @@ export class Game {
   splashes: Splash[] = [];
   comboCount = 1;
 
+  // Animation State
+  shakeDuration = 0;
+  shakeIntensity = 0;
+
   constructor() {
     this.activeBlock = this.randomNumberBlock();
     this.consecutiveNumbers = 1;
@@ -56,8 +60,7 @@ export class Game {
   }
 
   randomBlock(): Block {
-    // Add a small chance for a bomb block
-    if (Math.random() < 0.05) { // 5% chance
+    if (Math.random() < 0.05) {
       return { kind: "bomb" };
     }
 
@@ -126,10 +129,12 @@ export class Game {
         this.score += 50 * this.comboCount;
         this.comboCount++;
         changed = true;
+        this.shakeDuration = 150;
+        this.shakeIntensity = 5;
         if (this.score >= this.levelUpScore) {
           this.level++;
-          this.levelUpScore *= 2; // Double the score needed for the next level
-          Sound.play("level-up"); // Placeholder for a level-up sound
+          this.levelUpScore *= 2;
+          Sound.play("level-up");
         }
     }
 
@@ -213,14 +218,23 @@ export class Game {
         }
       }
     }
-    this.score += clearedBlocks * 25; // Add points for bomb clears
-    Sound.play("splash");
+    this.score += clearedBlocks * 25;
+    Sound.play("blast");
+    this.shakeDuration = 300;
+    this.shakeIntensity = 10;
   }
 
 
   updateAnimations(deltaTime: number) {
-    this.splashes.forEach(s => s.progress += deltaTime / 500); // 500ms splash animation
+    this.splashes.forEach(s => s.progress += deltaTime / 500);
     this.splashes = this.splashes.filter(s => s.progress < 1);
+
+    if (this.shakeDuration > 0) {
+      this.shakeDuration -= deltaTime;
+      if (this.shakeDuration <= 0) {
+        this.shakeIntensity = 0;
+      }
+    }
   }
 
   update() {

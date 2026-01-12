@@ -2,22 +2,33 @@ import { useEffect, useRef, useState } from "react";
 import { Game } from "@/game/Game";
 import { render } from "@/game/Renderer";
 import { Sound } from "@/game/Sound";
+import { HowToPlay } from "@/components/HowToPlay";
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
+  const animationFrameId = useRef<number | null>(null);
+
   const [isGameOver, setIsGameOver] = useState(false);
+  const [showHowToPlay, setShowHowToPlay] = useState(true);
+
+  // This ref is the key to fixing the stale closure bug.
+  // It will always have the current value of whether the game is paused.
+  const isPausedRef = useRef(true);
+  useEffect(() => {
+    isPausedRef.current = showHowToPlay;
+  }, [showHowToPlay]);
+
   const soundInitialized = useRef(false);
-  
-  // Touch state
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const MIN_SWIPE_DISTANCE = 30; // Minimum distance for a swipe to be registered
+  const MIN_SWIPE_DISTANCE = 30;
 
   const handleRestart = () => {
     if (gameRef.current) {
       gameRef.current = new Game();
       setIsGameOver(false);
+      setShowHowToPlay(false);
     }
   };
 
@@ -35,6 +46,10 @@ export default function Home() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    if (!gameRef.current) {
+      gameRef.current = new Game();
+    }
+
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -42,11 +57,9 @@ export default function Home() {
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
-    const game = new Game();
-    gameRef.current = game;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       initSound();
+      if (isPausedRef.current) return;
       if (!gameRef.current) return;
       if (gameRef.current.gameOver) {
         if (e.key === "r") handleRestart();
@@ -54,116 +67,94 @@ export default function Home() {
       }
       if (e.key === "ArrowLeft") gameRef.current.moveLeft();
       if (e.key === "ArrowRight") gameRef.current.moveRight();
-      if (e.key === "ArrowDown") gameRef.current.update(); // Speed up fall
+      if (e.key === "ArrowDown") gameRef.current.update();
     };
 
     const handleTouchStart = (e: TouchEvent) => {
-      // Prevent the browser from doing its default thing (like scrolling)
       e.preventDefault();
       initSound();
+      if (isPausedRef.current) return;
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
     };
-    
+
     const handleTouchMove = (e: TouchEvent) => {
-        e.preventDefault();
+      e.preventDefault();
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
       e.preventDefault();
-      if (!touchStartX.current || !touchStartY.current || !gameRef.current) {
+      if (isPausedRef.current || !touchStartX.current || !touchStartY.current || !gameRef.current) {
         return;
       }
-      
       if (gameRef.current.gameOver) {
-          handleRestart();
-          return;
+        handleRestart();
+        return;
       }
 
       const touchEndX = e.changedTouches[0].clientX;
       const touchEndY = e.changedTouches[0].clientY;
-
       const deltaX = touchEndX - touchStartX.current;
       const deltaY = touchEndY - touchStartY.current;
 
       touchStartX.current = null;
       touchStartY.current = null;
-      
-      // Check for horizontal swipe
+
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
         if (Math.abs(deltaX) > MIN_SWIPE_DISTANCE) {
-          if (deltaX > 0) {
-            gameRef.current.moveRight();
-          } else {
-            gameRef.current.moveLeft();
-          }
+          if (deltaX > 0) gameRef.current.moveRight();
+          else gameRef.current.moveLeft();
         }
-      } 
-      // Check for vertical swipe (downwards)
-      else if (deltaY > MIN_SWIPE_DISTANCE) {
-         gameRef.current.update(); // Speed up fall
+      } else if (deltaY > MIN_SWIPE_DISTANCE) {
+        gameRef.current.update();
       }
     };
-    
 
     window.addEventListener("keydown", handleKeyDown);
     canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
     canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
     canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
 
-
     let lastTime = 0;
     let dropCounter = 0;
 
     const gameLoop = (time: number) => {
-      if (!gameRef.current) return;
+      animationFrameId.current = requestAnimationFrame(gameLoop);
+
+      const game = gameRef.current;
+      if (!game || !ctx) return;
 
       let deltaTime = time - lastTime;
       lastTime = time;
+      if (deltaTime > 100) deltaTime = 100;
 
-      // Cap deltaTime to prevent large jumps
-      if (deltaTime > 100) {
-        deltaTime = 100;
-      }
-
-      const dropInterval = gameRef.current.getDropInterval();
-      dropCounter += deltaTime;
-
-      let fallProgress = dropCounter / dropInterval;
-
-      if (dropCounter > dropInterval) {
-        if (!gameRef.current.gameOver) {
-          gameRef.current.update();
+      if (!isPausedRef.current && !game.gameOver) {
+        const dropInterval = game.getDropInterval();
+        dropCounter += deltaTime;
+        if (dropCounter > dropInterval) {
+          game.update();
+          dropCounter = 0;
         }
-        dropCounter = 0;
-        fallProgress = 0;
+        game.updateAnimations(deltaTime);
       }
 
-      gameRef.current.updateAnimations(deltaTime);
+      setIsGameOver(game.gameOver);
 
-      setIsGameOver(gameRef.current.gameOver);
+      const fallProgress = isPausedRef.current ? 0 : dropCounter / game.getDropInterval();
+
       render(
-        ctx,
-        gameRef.current.grid,
-        gameRef.current.activeBlock,
-        gameRef.current.row,
-        gameRef.current.col,
-        canvas,
-        gameRef.current.score,
-        gameRef.current.nextBlock,
-        gameRef.current.gameOver,
-        fallProgress,
-        gameRef.current.splashes,
-        gameRef.current.comboCount,
-        gameRef.current.level
+        ctx, game.grid, game.activeBlock, game.row, game.col, canvas,
+        game.score, game.nextBlock, game.gameOver, fallProgress,
+        game.splashes, game.comboCount, game.level, game.shakeDuration, game.shakeIntensity
       );
-
-      requestAnimationFrame(gameLoop);
     };
 
     gameLoop(0);
 
     return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", resizeCanvas);
       canvas.removeEventListener("touchstart", handleTouchStart);
@@ -173,8 +164,21 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="relative w-screen h-screen bg-slate-900">
+    <div className="relative w-screen h-screen bg-slate-900 font-sans">
+      {showHowToPlay && <HowToPlay onStart={() => setShowHowToPlay(false)} />}
       <canvas ref={canvasRef} className="block w-full h-full" />
+
+      {!isGameOver && (
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={() => setShowHowToPlay(true)}
+            className="text-white bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg shadow-lg transition-colors"
+          >
+            How to Play
+          </button>
+        </div>
+      )}
+
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4">
         {isGameOver ? (
           <button
@@ -188,18 +192,18 @@ export default function Home() {
             <button
               onClick={() => {
                 initSound();
-                gameRef.current?.moveLeft();
+                if (!isPausedRef.current) gameRef.current?.moveLeft();
               }}
-              className="px-8 py-4 text-2xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors"
+              className="px-8 py-4 text-2xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors active:bg-slate-500"
             >
               &larr;
             </button>
             <button
               onClick={() => {
                 initSound();
-                gameRef.current?.moveRight();
+                if (!isPausedRef.current) gameRef.current?.moveRight();
               }}
-              className="px-8 py-4 text-2xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors"
+              className="px-8 py-4 text-2xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors active:bg-slate-500"
             >
               &rarr;
             </button>

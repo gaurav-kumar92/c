@@ -181,9 +181,18 @@ export function render(
   fallProgress: number,
   splashes: Splash[],
   comboCount: number,
-  level: number
+  level: number,
+  shakeDuration: number,
+  shakeIntensity: number
 ) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+
+  if (shakeDuration > 0) {
+    const shakeX = (Math.random() - 0.5) * shakeIntensity;
+    const shakeY = (Math.random() - 0.5) * shakeIntensity;
+    ctx.translate(shakeX, shakeY);
+  }
 
   drawBackground(ctx, canvas);
 
@@ -218,4 +227,6 @@ export function render(
   }
 
   drawUIText(ctx, canvas, score, nextBlock, gameOver, comboCount, level);
+
+  ctx.restore();
 }
