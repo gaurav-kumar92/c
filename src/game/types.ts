@@ -11,6 +11,10 @@ export type Block =
       kind: "bomb";
     };
 
+export type Cell = {
+  block: Block | null;
+};
+
 export type Splash = {
   x: number;
   y: number;

@@ -1,6 +1,5 @@
 import { Grid } from "./Grid";
 import { Block, Splash } from "./types";
-import { ROWS, COLS } from "./constants";
 import { Sound } from "./Sound";
 
 export class Game {
@@ -8,24 +7,58 @@ export class Game {
   activeBlock: Block;
   nextBlock: Block;
   row = 0;
-  col = Math.floor(COLS / 2);
+  col: number;
   score = 0;
   level = 1;
   levelUpScore = 500;
   gameOver = false;
-  consecutiveOperators = 0;
-  consecutiveNumbers = 0;
+  gameWon = false;
   splashes: Splash[] = [];
   comboCount = 1;
+  blockBag: Block[] = [];
 
   // Animation State
   shakeDuration = 0;
   shakeIntensity = 0;
 
   constructor() {
-    this.activeBlock = this.randomNumberBlock();
-    this.consecutiveNumbers = 1;
+    this.col = Math.floor(this.grid.cols / 2);
+    this.fillGridWithNumbers();
+    this.refillBlockBag();
+    this.activeBlock = this.randomBlock();
     this.nextBlock = this.randomBlock();
+  }
+
+  fillGridWithNumbers() {
+    const middle = Math.floor(this.grid.cols / 2);
+    const fillRows = Math.floor(this.grid.rows / 2);
+    for (let r = this.grid.rows - fillRows; r < this.grid.rows; r++) {
+      for (let c = 0; c < this.grid.cols; c++) {
+        if (r < this.grid.rows - fillRows + 2 && c >= middle - 1 && c <= middle + 1) {
+          continue;
+        }
+        this.grid.cells[r][c].block = this.randomNumberBlock();
+      }
+    }
+  }
+  
+  refillBlockBag() {
+    this.blockBag = [];
+    for (let i = 0; i < 3; i++) {
+        this.blockBag.push({ kind: "operator", op: '+' });
+        this.blockBag.push({ kind: "operator", op: '-' });
+        this.blockBag.push({ kind: "operator", op: '*' });
+        this.blockBag.push({ kind: "operator", op: '/' });
+    }
+    for (let i = 0; i < 6; i++) {
+        this.blockBag.push(this.randomNumberBlock());
+    }
+    this.blockBag.push({ kind: "bomb" });
+
+    for (let i = this.blockBag.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.blockBag[i], this.blockBag[j]] = [this.blockBag[j], this.blockBag[i]];
+    }
   }
 
   getDropInterval() {
@@ -39,52 +72,11 @@ export class Game {
     };
   }
 
-  randomOperatorBlock(): Block {
-    const rand = Math.random();
-    let op: '+' | '-' | '*' | '/';
-
-    if (rand < 0.25) {
-      op = '+';
-    } else if (rand < 0.5) {
-      op = '-';
-    } else if (rand < 0.75) {
-      op = '*';
-    } else {
-      op = '/';
-    }
-
-    return {
-      kind: "operator",
-      op: op,
-    };
-  }
-
   randomBlock(): Block {
-    if (Math.random() < 0.05) {
-      return { kind: "bomb" };
+    if (this.blockBag.length === 0) {
+        this.refillBlockBag();
     }
-
-    if (this.consecutiveNumbers >= 3) {
-      this.consecutiveNumbers = 0;
-      this.consecutiveOperators = 1;
-      return this.randomOperatorBlock();
-    }
-
-    if (this.consecutiveOperators >= 2) {
-      this.consecutiveOperators = 0;
-      this.consecutiveNumbers = 1;
-      return this.randomNumberBlock();
-    }
-
-    if (Math.random() > 0.5) {
-      this.consecutiveNumbers++;
-      this.consecutiveOperators = 0;
-      return this.randomNumberBlock();
-    } else {
-      this.consecutiveOperators++;
-      this.consecutiveNumbers = 0;
-      return this.randomOperatorBlock();
-    }
+    return this.blockBag.pop() as Block;
   }
 
   moveLeft() {
@@ -95,18 +87,26 @@ export class Game {
 
   moveRight() {
     if (
-      this.col < COLS - 1 &&
+      this.col < this.grid.cols - 1 &&
       this.grid.isEmpty(this.row, this.col + 1)
     ) {
       this.col++;
     }
   }
 
+  drop() {
+    if (this.gameOver) return;
+    while (this.row + 1 < this.grid.rows && this.grid.isEmpty(this.row + 1, this.col)) {
+      this.row++;
+    }
+    this.update();
+  }
+
   applyGravity() {
     let changed = false;
-    for (let c = 0; c < COLS; c++) {
+    for (let c = 0; c < this.grid.cols; c++) {
       let emptyRow = -1;
-      for (let r = ROWS - 1; r >= 0; r--) {
+      for (let r = this.grid.rows - 1; r >= 0; r--) {
         if (!this.grid.cells[r][c].block) {
           if (emptyRow === -1) {
             emptyRow = r;
@@ -120,6 +120,18 @@ export class Game {
       }
     }
     return changed;
+  }
+
+  checkWinCondition() {
+    for (let r = 0; r < this.grid.rows; r++) {
+      for (let c = 0; c < this.grid.cols; c++) {
+        if (this.grid.cells[r][c].block?.kind === 'number') {
+          return;
+        }
+      }
+    }
+    this.gameWon = true;
+    this.gameOver = true;
   }
 
   resolveGrid() {
@@ -136,9 +148,8 @@ export class Game {
         }
     }
 
-    // Vertical calculations
-    for (let c = 0; c < COLS; c++) {
-      for (let r = ROWS - 1; r >= 2; r--) {
+    for (let c = 0; c < this.grid.cols; c++) {
+      for (let r = this.grid.rows - 1; r >= 2; r--) {
         const bottom = this.grid.cells[r][c].block;
         const middle = this.grid.cells[r - 1][c].block;
         const top = this.grid.cells[r - 2][c].block;
@@ -168,9 +179,8 @@ export class Game {
       }
     }
 
-    // Horizontal calculations
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c <= COLS - 3; c++) {
+    for (let r = 0; r < this.grid.rows; r++) {
+      for (let c = 0; c <= this.grid.cols - 3; c++) {
         const left = this.grid.cells[r][c].block;
         const middle = this.grid.cells[r][c + 1].block;
         const right = this.grid.cells[r][c + 2].block;
@@ -200,6 +210,9 @@ export class Game {
       }
     }
 
+    if (changed) {
+        this.checkWinCondition();
+    }
     return changed;
   }
 
@@ -207,7 +220,7 @@ export class Game {
     let clearedBlocks = 0;
     for (let r = row - 1; r <= row + 1; r++) {
       for (let c = col - 1; c <= col + 1; c++) {
-        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+        if (r >= 0 && r < this.grid.rows && c >= 0 && c < this.grid.cols) {
           if (this.grid.cells[r][c].block) {
             clearedBlocks++;
             this.grid.cells[r][c].block = null;
@@ -220,6 +233,7 @@ export class Game {
     Sound.play("blast");
     this.shakeDuration = 300;
     this.shakeIntensity = 10;
+    this.checkWinCondition();
   }
 
 
@@ -238,7 +252,7 @@ export class Game {
   update() {
     if (this.gameOver) return;
 
-    if (this.row + 1 >= ROWS || !this.grid.isEmpty(this.row + 1, this.col)) {
+    if (this.row + 1 >= this.grid.rows || !this.grid.isEmpty(this.row + 1, this.col)) {
       if (this.activeBlock.kind === 'bomb') {
         this.handleBomb(this.row, this.col);
       } else {
@@ -257,7 +271,7 @@ export class Game {
       this.activeBlock = this.nextBlock;
       this.nextBlock = this.randomBlock();
       this.row = 0;
-      this.col = Math.floor(COLS / 2);
+      this.col = Math.floor(this.grid.cols / 2);
 
       if (!this.grid.isEmpty(this.row, this.col)) {
         this.gameOver = true;

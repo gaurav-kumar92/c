@@ -8,12 +8,12 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const animationFrameId = useRef<number | null>(null);
+  const howToPlayButton = useRef<{ x: number, y: number, width: number, height: number } | null>(null);
 
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isGameWon, setIsGameWon] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(true);
 
-  // This ref is the key to fixing the stale closure bug.
-  // It will always have the current value of whether the game is paused.
   const isPausedRef = useRef(true);
   useEffect(() => {
     isPausedRef.current = showHowToPlay;
@@ -22,12 +22,15 @@ export default function Home() {
   const soundInitialized = useRef(false);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  
   const MIN_SWIPE_DISTANCE = 30;
+  const TAP_DISTANCE_THRESHOLD = 10;
 
   const handleRestart = () => {
     if (gameRef.current) {
       gameRef.current = new Game();
       setIsGameOver(false);
+      setIsGameWon(false);
       setShowHowToPlay(false);
     }
   };
@@ -57,6 +60,21 @@ export default function Home() {
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
+    const handleClick = (e: MouseEvent) => {
+      if (isPausedRef.current) return;
+      
+      const btn = howToPlayButton.current;
+      if (!canvas || !btn) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      if (x >= btn.x && x <= btn.x + btn.width && y >= btn.y && y <= btn.y + btn.height) {
+        setShowHowToPlay(true);
+      }
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       initSound();
       if (isPausedRef.current) return;
@@ -68,6 +86,7 @@ export default function Home() {
       if (e.key === "ArrowLeft") gameRef.current.moveLeft();
       if (e.key === "ArrowRight") gameRef.current.moveRight();
       if (e.key === "ArrowDown") gameRef.current.update();
+      if (e.key === " ") gameRef.current.drop();
     };
 
     const handleTouchStart = (e: TouchEvent) => {
@@ -97,20 +116,35 @@ export default function Home() {
       const deltaX = touchEndX - touchStartX.current;
       const deltaY = touchEndY - touchStartY.current;
 
+      const isTap = Math.abs(deltaX) < TAP_DISTANCE_THRESHOLD && Math.abs(deltaY) < TAP_DISTANCE_THRESHOLD;
+
+      if (isTap) {
+        const btn = howToPlayButton.current;
+        if (canvas && btn) {
+            const rect = canvas.getBoundingClientRect();
+            const x = touchEndX - rect.left;
+            const y = touchEndY - rect.top;
+            if (x >= btn.x && x <= btn.x + btn.width && y >= btn.y && y <= btn.y + btn.height) {
+                setShowHowToPlay(true);
+            }
+        }
+      } else {
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          if (Math.abs(deltaX) > MIN_SWIPE_DISTANCE) {
+            if (deltaX > 0) gameRef.current.moveRight();
+            else gameRef.current.moveLeft();
+          }
+        } else if (deltaY > MIN_SWIPE_DISTANCE) {
+          gameRef.current.drop();
+        }
+      }
+
       touchStartX.current = null;
       touchStartY.current = null;
-
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        if (Math.abs(deltaX) > MIN_SWIPE_DISTANCE) {
-          if (deltaX > 0) gameRef.current.moveRight();
-          else gameRef.current.moveLeft();
-        }
-      } else if (deltaY > MIN_SWIPE_DISTANCE) {
-        gameRef.current.update();
-      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
+    canvas.addEventListener("click", handleClick);
     canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
     canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
     canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
@@ -139,14 +173,14 @@ export default function Home() {
       }
 
       setIsGameOver(game.gameOver);
+      setIsGameWon(game.gameWon);
 
       const fallProgress = isPausedRef.current ? 0 : dropCounter / game.getDropInterval();
 
-      render(
+      howToPlayButton.current = render(
         ctx, game.grid, game.activeBlock, game.row, game.col, canvas,
-        game.score, game.nextBlock, game.gameOver, fallProgress,
+        game.score, game.nextBlock, game.gameOver, game.gameWon, fallProgress,
         game.splashes, game.comboCount, game.level, game.shakeDuration, game.shakeIntensity,
-        () => setShowHowToPlay(true)
       );
     };
 
@@ -157,6 +191,7 @@ export default function Home() {
         cancelAnimationFrame(animationFrameId.current);
       }
       window.removeEventListener("keydown", handleKeyDown);
+      canvas.removeEventListener("click", handleClick);
       window.removeEventListener("resize", resizeCanvas);
       canvas.removeEventListener("touchstart", handleTouchStart);
       canvas.removeEventListener("touchmove", handleTouchMove);
@@ -169,14 +204,16 @@ export default function Home() {
       {showHowToPlay && <HowToPlay onStart={() => setShowHowToPlay(false)} />}
       <canvas ref={canvasRef} className="block w-full h-full" />
 
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4">
+      <div className="absolute bottom-25 inset-x-0 px-10 flex justify-between items-center">
         {isGameOver ? (
-          <button
-            onClick={handleRestart}
-            className="px-8 py-4 text-2xl font-bold text-white bg-blue-500 rounded-lg shadow-lg hover:bg-blue-600 transition-colors"
-          >
-            Restart
-          </button>
+          <div className="w-full flex justify-center">
+            <button
+              onClick={handleRestart}
+              className="px-8 py-4 text-xl font-bold text-white bg-blue-500 rounded-lg shadow-lg hover:bg-blue-600 transition-colors"
+            >
+              Restart
+            </button>
+          </div>
         ) : (
           <>
             <button
@@ -184,16 +221,25 @@ export default function Home() {
                 initSound();
                 if (!isPausedRef.current) gameRef.current?.moveLeft();
               }}
-              className="px-8 py-4 text-2xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors active:bg-slate-500"
+              className="px-6 py-3 text-xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors active:bg-slate-500"
             >
               &larr;
             </button>
             <button
               onClick={() => {
                 initSound();
+                if (!isPausedRef.current) gameRef.current?.drop();
+              }}
+              className="px-6 py-3 text-xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors active:bg-slate-500"
+            >
+              Drop
+            </button>
+            <button
+              onClick={() => {
+                initSound();
                 if (!isPausedRef.current) gameRef.current?.moveRight();
               }}
-              className="px-8 py-4 text-2xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors active:bg-slate-500"
+              className="px-6 py-3 text-xl font-bold text-white bg-slate-700 rounded-lg shadow-lg hover:bg-slate-600 transition-colors active:bg-slate-500"
             >
               &rarr;
             </button>
