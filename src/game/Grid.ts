@@ -1,5 +1,5 @@
 import { COLS, ROWS } from "./constants";
-import { Cell, Block } from "./types";
+import { Block } from "./types";
 
 export class Grid {
   cells: Cell[][];
