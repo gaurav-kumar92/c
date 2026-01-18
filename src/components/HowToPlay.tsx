@@ -5,16 +5,17 @@ export function HowToPlay({ onStart }: { onStart: () => void }) {
         <h2 className="text-3xl md:text-4xl font-bold text-center text-sky-400 mb-6">How to Play Calc Rush</h2>
         <div className="space-y-4 text-slate-300 text-sm md:text-base">
           <p>
-            <span className="font-bold text-amber-400">Goal:</span> Divide or Subtract the block to reach 0. Score points by forming equations! If an equation's result is 0, you win instantly. Don't let the blocks stack to the top.
+            <span className="font-bold text-amber-400">Goal:</span> Divide or Subtract the block to reach 0. Score points by forming equations! If an equation's result is 0, block disappears. Don't let the blocks stack to the top.
           </p>
           <ul className="list-disc list-inside space-y-2">
             <li>Use the <span className="font-bold text-green-400">arrow keys</span> or <span className="font-bold text-green-400">swipe</span> to move the falling block left and right.</li>
-            <li>Press the <span className="font-bold text-green-400">down arrow, spacebar,</span> or <span className="font-bold text-green-400">swipe down</span> to drop the block instantly.</li>
-            <li>Arrange blocks to form <span className="font-bold text-sky-400">vertical or horizontal</span> equations. For example: <code className="bg-slate-700 px-1 rounded">[ 2 ] [ + ] [ 3 ]</code> or</li>
+            <li>Press the <span className="font-bold text-green-400">down button, spacebar,</span> or <span className="font-bold text-green-400">swipe down</span> to drop the block instantly.</li>
+            <li>Arrange blocks to form <span className="font-bold text-sky-400">vertical or horizontal</span> equations. For example: </li>
+            <li><code className="bg-slate-700 px-1 rounded"> [ 3 ] [ - ] [ 2 ]</code> or</li>
             <div className="flex flex-col items-center py-2">
-                <code className="bg-slate-700 px-1 rounded">[ 3 ]</code>
-                <code className="bg-slate-700 px-1 rounded">[ + ]</code>
                 <code className="bg-slate-700 px-1 rounded">[ 2 ]</code>
+                <code className="bg-slate-700 px-1 rounded">[ - ]</code>
+                <code className="bg-slate-700 px-1 rounded">[ 3 ]</code>
             </div>
             <li>Equations are resolved from top-to-bottom or left-to-right. For subtraction and division, the order matters!</li>
             <li><span className="font-bold text-red-500">Bombs (💣)</span> will clear a 3x3 area around them.</li>

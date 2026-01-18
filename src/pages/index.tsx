@@ -3,6 +3,7 @@ import { Game } from "@/game/Game";
 import { render } from "@/game/Renderer";
 import { Sound } from "@/game/Sound";
 import { HowToPlay } from "@/components/HowToPlay";
+import { LevelUpModal } from "@/components/LevelUpModal";
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -13,26 +14,37 @@ export default function Home() {
   const [isGameOver, setIsGameOver] = useState(false);
   const [isGameWon, setIsGameWon] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(true);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [isPaused, setIsPaused] = useState(true);
 
-  const isPausedRef = useRef(true);
+  const isPausedRef = useRef(isPaused);
   useEffect(() => {
-    isPausedRef.current = showHowToPlay;
-  }, [showHowToPlay]);
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
 
   const soundInitialized = useRef(false);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const lastLevel = useRef(1);
   
   const MIN_SWIPE_DISTANCE = 30;
   const TAP_DISTANCE_THRESHOLD = 10;
 
+  useEffect(() => {
+    setIsPaused(showHowToPlay || showLevelUp);
+  }, [showHowToPlay, showLevelUp]);
+
   const handleRestart = () => {
-    if (gameRef.current) {
-      gameRef.current = new Game();
-      setIsGameOver(false);
-      setIsGameWon(false);
-      setShowHowToPlay(false);
-    }
+    lastLevel.current = 1;
+    gameRef.current = new Game();
+    setIsGameOver(false);
+    setIsGameWon(false);
+    setShowHowToPlay(false);
+    setShowLevelUp(false);
+  };
+
+  const handleContinue = () => {
+    setShowLevelUp(false);
   };
 
   const initSound = () => {
@@ -171,6 +183,11 @@ export default function Home() {
         }
         game.updateAnimations(deltaTime);
       }
+      
+      if (game.level > lastLevel.current) {
+        setShowLevelUp(true);
+        lastLevel.current = game.level;
+      }
 
       setIsGameOver(game.gameOver);
       setIsGameWon(game.gameWon);
@@ -191,7 +208,7 @@ export default function Home() {
         cancelAnimationFrame(animationFrameId.current);
       }
       window.removeEventListener("keydown", handleKeyDown);
-      canvas.removeEventListener("click", handleClick);
+      window.removeEventListener("click", handleClick);
       window.removeEventListener("resize", resizeCanvas);
       canvas.removeEventListener("touchstart", handleTouchStart);
       canvas.removeEventListener("touchmove", handleTouchMove);
@@ -202,6 +219,7 @@ export default function Home() {
   return (
     <div className="relative w-screen h-screen bg-slate-900 font-sans">
       {showHowToPlay && <HowToPlay onStart={() => setShowHowToPlay(false)} />}
+      {showLevelUp && <LevelUpModal onContinue={handleContinue} level={gameRef.current?.level ?? 0} />}
       <canvas ref={canvasRef} className="block w-full h-full" />
 
       <div className="absolute bottom-25 inset-x-0 px-10 flex justify-between items-center">

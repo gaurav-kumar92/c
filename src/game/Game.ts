@@ -44,15 +44,36 @@ export class Game {
   
   refillBlockBag() {
     this.blockBag = [];
-    for (let i = 0; i < 3; i++) {
-        this.blockBag.push({ kind: "operator", op: '+' });
-        this.blockBag.push({ kind: "operator", op: '-' });
-        this.blockBag.push({ kind: "operator", op: '*' });
-        this.blockBag.push({ kind: "operator", op: '/' });
+    const operators: ('+' | '-' | '*' | '/')[] = ['-'];
+
+    if (this.level < 5) {
+        this.blockBag.push({ kind: 'operator', op: '-' });
+        this.blockBag.push({ kind: 'operator', op: '-' });
     }
-    for (let i = 0; i < 6; i++) {
+
+    if (this.level >= 5) {
+        operators.push('+');
+    }
+    if (this.level >= 8) {
+        operators.push('/');
+    }
+    if (this.level >= 10) {
+        operators.push('*');
+    }
+
+    const numNumbers = Math.max(6, 9 - this.level);
+    const numOperatorSets = Math.min(4, Math.floor(this.level / 2) + 2);
+
+    for (let i = 0; i < numOperatorSets; i++) {
+        for (const op of operators) {
+            this.blockBag.push({ kind: 'operator', op });
+        }
+    }
+
+    for (let i = 0; i < numNumbers; i++) {
         this.blockBag.push(this.randomNumberBlock());
     }
+    
     this.blockBag.push({ kind: "bomb" });
 
     for (let i = this.blockBag.length - 1; i > 0; i--) {
@@ -235,7 +256,6 @@ export class Game {
     this.shakeIntensity = 10;
     this.checkWinCondition();
   }
-
 
   updateAnimations(deltaTime: number) {
     this.splashes.forEach(s => s.progress += deltaTime / 500);
