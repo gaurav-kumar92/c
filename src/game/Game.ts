@@ -12,7 +12,6 @@ export class Game {
   level = 1;
   levelUpScore = 500;
   gameOver = false;
-  gameWon = false;
   splashes: Splash[] = [];
   comboCount = 1;
   blockBag: Block[] = [];
@@ -151,8 +150,25 @@ export class Game {
         }
       }
     }
-    this.gameWon = true;
-    this.gameOver = true;
+    this.startNextLevel();
+  }
+
+  startNextLevel() {
+    this.level++;
+    this.score += 1000; // Bonus for clearing the board
+    this.levelUpScore *= 2;
+    Sound.play("level-up");
+
+    // Reset grid and repopulate
+    this.grid = new Grid();
+    this.fillGridWithNumbers();
+    this.refillBlockBag();
+
+    // Reset active block
+    this.activeBlock = this.randomBlock();
+    this.nextBlock = this.randomBlock();
+    this.row = 0;
+    this.col = Math.floor(this.grid.cols / 2);
   }
 
   resolveGrid() {
