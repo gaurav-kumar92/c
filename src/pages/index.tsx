@@ -13,7 +13,6 @@ export default function Home() {
   const howToPlayButton = useRef<{ x: number, y: number, width: number, height: number } | null>(null);
 
   const [isGameOver, setIsGameOver] = useState(false);
-  const [isGameWon, setIsGameWon] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(true);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
@@ -39,7 +38,6 @@ export default function Home() {
     lastLevel.current = 1;
     gameRef.current = new Game();
     setIsGameOver(false);
-    setIsGameWon(false);
     setShowHowToPlay(false);
     setShowLevelUp(false);
   };
@@ -191,13 +189,12 @@ export default function Home() {
       }
 
       setIsGameOver(game.gameOver);
-      setIsGameWon(game.gameWon);
 
       const fallProgress = isPausedRef.current ? 0 : dropCounter / game.getDropInterval();
 
       howToPlayButton.current = render(
         ctx, game.grid, game.activeBlock, game.row, game.col, canvas,
-        game.score, game.nextBlock, game.gameOver, game.gameWon, fallProgress,
+        game.score, game.nextBlock, game.gameOver, false, fallProgress,
         game.splashes, game.comboCount, game.level, game.shakeDuration, game.shakeIntensity,
       );
     };
