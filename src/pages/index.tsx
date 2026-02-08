@@ -221,7 +221,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="relative w-screen h-screen bg-slate-900 font-sans">
+    <div className="fixed inset-0 bg-slate-900 font-sans">
       {showHowToPlay && <HowToPlay onStart={() => setShowHowToPlay(false)} />}
       {showLevelUp && <LevelUpModal onContinue={handleContinue} level={gameRef.current?.level ?? 0} />}
       <canvas ref={canvasRef} className="block w-full h-full" />
