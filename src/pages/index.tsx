@@ -5,6 +5,7 @@ import { Sound } from "@/game/Sound";
 import { HowToPlay } from "@/components/HowToPlay";
 import { LevelUpModal } from "@/components/LevelUpModal";
 import AdContainer from "@/components/ads/AdContainer";
+import { AdsterraService } from "@/services/AdsterraService";
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -16,6 +17,7 @@ export default function Home() {
   const [showHowToPlay, setShowHowToPlay] = useState(true);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
+  const [isShowingAd, setIsShowingAd] = useState(false);
 
   const isPausedRef = useRef(isPaused);
   useEffect(() => {
@@ -31,10 +33,14 @@ export default function Home() {
   const TAP_DISTANCE_THRESHOLD = 10;
 
   useEffect(() => {
-    setIsPaused(showHowToPlay || showLevelUp);
-  }, [showHowToPlay, showLevelUp]);
+    setIsPaused(showHowToPlay || showLevelUp || isShowingAd);
+  }, [showHowToPlay, showLevelUp, isShowingAd]);
 
-  const handleRestart = () => {
+  const handleRestart = async () => {
+    setIsShowingAd(true);
+    await AdsterraService.showAd();
+    setIsShowingAd(false);
+
     lastLevel.current = 1;
     gameRef.current = new Game();
     setIsGameOver(false);

@@ -1,5 +1,5 @@
 // src/components/LevelUpModal.tsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AdsterraService } from "@/services/AdsterraService";
 
 interface LevelUpModalProps {
@@ -9,28 +9,9 @@ interface LevelUpModalProps {
 
 export function LevelUpModal({ onContinue, level }: LevelUpModalProps) {
   const [isLoadingAd, setIsLoadingAd] = useState(false);
-  const [adReady, setAdReady] = useState(AdsterraService.canShowAd());
-  const [cooldownTime, setCooldownTime] = useState(0);
-
-  // Update cooldown display
-  useEffect(() => {
-    if (!adReady) {
-      const interval = setInterval(() => {
-        const timeLeft = AdsterraService.getTimeUntilNextAd();
-        setCooldownTime(timeLeft);
-
-        if (timeLeft <= 0) {
-          setAdReady(true);
-          clearInterval(interval);
-        }
-      }, 1000);
-
-      return () => clearInterval(interval);
-    }
-  }, [adReady]);
 
   const handleShowAdAndContinue = async () => {
-    if (!adReady || isLoadingAd) return;
+    if (isLoadingAd) return;
 
     setIsLoadingAd(true);
 
@@ -40,12 +21,10 @@ export function LevelUpModal({ onContinue, level }: LevelUpModalProps) {
       
       // Ad completed, continue game
       setIsLoadingAd(false);
-      setAdReady(false);
       onContinue();
     } catch (error) {
       console.error("Error showing ad:", error);
       setIsLoadingAd(false);
-      setAdReady(false);
       onContinue();
     }
   };
@@ -59,28 +38,13 @@ export function LevelUpModal({ onContinue, level }: LevelUpModalProps) {
         </p>
 
         {/* Ad Button Section */}
-        {adReady ? (
-          <button
-            onClick={handleShowAdAndContinue}
-            disabled={isLoadingAd}
-            className="bg-green-500 hover:bg-green-600 disabled:bg-gray-500 text-white font-bold py-4 px-8 rounded-lg text-xl transition-colors w-full mb-4 flex items-center justify-center gap-2"
-          >
-            <span>🎬</span>
-            <span>{isLoadingAd ? "Loading Ad..." : "Watch Ad & Continue"}</span>
-          </button>
-        ) : (
-          <div className="bg-gray-600 text-white font-bold py-4 px-8 rounded-lg text-xl w-full mb-4 flex items-center justify-center gap-2">
-            <span>⏳</span>
-            <span>Ad ready in {cooldownTime}s</span>
-          </div>
-        )}
-
-        {/* Skip Button */}
         <button
-          onClick={onContinue}
-          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors w-full"
+          onClick={handleShowAdAndContinue}
+          disabled={isLoadingAd}
+          className="bg-green-500 hover:bg-green-600 disabled:bg-gray-500 text-white font-bold py-4 px-8 rounded-lg text-xl transition-colors w-full mb-4 flex items-center justify-center gap-2"
         >
-          Skip (Continue Without Ad)
+          <span>🎬</span>
+          <span>{isLoadingAd ? "Loading Ad..." : "Watch Ad & Continue"}</span>
         </button>
 
         {/* Info Text */}
