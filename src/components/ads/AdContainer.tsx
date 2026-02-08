@@ -4,6 +4,8 @@ import AdsterraBanner from './AdsterraBanner';
 import AdMob from './AdMob';
 
 const AdContainer: React.FC = () => {
+  return null;
+  
   const [platform, setPlatform] = useState<'web' | 'mobile' | null>(null);
 
   useEffect(() => {

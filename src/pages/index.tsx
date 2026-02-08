@@ -4,8 +4,7 @@ import { render } from "@/game/Renderer";
 import { Sound } from "@/game/Sound";
 import { HowToPlay } from "@/components/HowToPlay";
 import { LevelUpModal } from "@/components/LevelUpModal";
-import AdContainer from "@/components/ads/AdContainer";
-import { AdsterraService } from "@/services/AdsterraService";
+import { AdService } from "@/services/AdService";
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,16 +35,17 @@ export default function Home() {
     setIsPaused(showHowToPlay || showLevelUp || isShowingAd);
   }, [showHowToPlay, showLevelUp, isShowingAd]);
 
-  const handleRestart = async () => {
+  const handleRestart = () => {
     setIsShowingAd(true);
-    await AdsterraService.showAd();
-    setIsShowingAd(false);
-
-    lastLevel.current = 1;
-    gameRef.current = new Game();
-    setIsGameOver(false);
-    setShowHowToPlay(false);
-    setShowLevelUp(false);
+    const restartGameLogic = () => {
+      setIsShowingAd(false);
+      lastLevel.current = 1;
+      gameRef.current = new Game();
+      setIsGameOver(false);
+      setShowHowToPlay(false);
+      setShowLevelUp(false);
+    };
+    AdService.showAd(restartGameLogic);
   };
 
   const handleContinue = () => {
@@ -222,7 +222,6 @@ export default function Home() {
 
   return (
     <div className="relative w-screen h-screen bg-slate-900 font-sans">
-      <AdContainer />
       {showHowToPlay && <HowToPlay onStart={() => setShowHowToPlay(false)} />}
       {showLevelUp && <LevelUpModal onContinue={handleContinue} level={gameRef.current?.level ?? 0} />}
       <canvas ref={canvasRef} className="block w-full h-full" />

@@ -1,6 +1,6 @@
 // src/components/LevelUpModal.tsx
 import { useState } from "react";
-import { AdsterraService } from "@/services/AdsterraService";
+import { AdService } from "@/services/AdService";
 
 interface LevelUpModalProps {
   onContinue: () => void;
@@ -10,23 +10,17 @@ interface LevelUpModalProps {
 export function LevelUpModal({ onContinue, level }: LevelUpModalProps) {
   const [isLoadingAd, setIsLoadingAd] = useState(false);
 
-  const handleShowAdAndContinue = async () => {
+  const handleShowAdAndContinue = () => {
     if (isLoadingAd) return;
 
     setIsLoadingAd(true);
 
-    try {
-      // Show the Adsterra ad
-      await AdsterraService.showAd();
-      
-      // Ad completed, continue game
+    const afterAdCallback = () => {
       setIsLoadingAd(false);
       onContinue();
-    } catch (error) {
-      console.error("Error showing ad:", error);
-      setIsLoadingAd(false);
-      onContinue();
-    }
+    };
+
+    AdService.showAd(afterAdCallback);
   };
 
   return (
