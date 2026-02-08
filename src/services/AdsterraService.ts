@@ -1,3 +1,4 @@
+
 // src/services/AdsterraService.ts
 
 export class AdsterraService {
@@ -16,7 +17,7 @@ export class AdsterraService {
   }
 
   /**
-   * Show Adsterra pop-under/interstitial ad
+   * Show Adsterra banner ad
    */
   static async showAd(onAdComplete?: () => void): Promise<void> {
     if (this.isAdPlaying) {
@@ -42,8 +43,8 @@ export class AdsterraService {
         return;
       }
 
-      // Try to trigger Adsterra pop-under
-      await this.triggerAdsterraPopAd();
+      // Trigger Adsterra banner ad
+      await this.triggerAdsterraBannerAd();
 
       // Wait for ad to complete
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -63,31 +64,36 @@ export class AdsterraService {
   }
 
   /**
-   * Trigger Adsterra pop-under ad
-   * This opens a new window with the ad
+   * Trigger Adsterra banner ad
+   * This injects a banner ad into the page
    */
-  private static async triggerAdsterraPopAd(): Promise<void> {
+  private static async triggerAdsterraBannerAd(): Promise<void> {
     try {
-      // Method: Direct window open (pop-under)
-      const adWindow = window.open(
-        "https://pl28641636.effectivegatecpm.com/",
-        "adsterra_popup",
-        "width=800,height=600,menubar=no,toolbar=no,location=no"
-      );
+      // Method: Inject banner ad script
+      const bannerContainer = document.createElement("div");
+      bannerContainer.id = "adsterra-banner-container";
+      document.body.appendChild(bannerContainer);
 
-      if (adWindow) {
-        // Send to background
-        try {
-          adWindow.blur();
-          window.focus();
-        } catch (e) {
-          console.log("Could not blur ad window:", e);
-        }
-      } else {
-        console.warn("Pop-up blocked - user may have pop-up blocker enabled");
-      }
+      const adScript = document.createElement("script");
+      adScript.type = "text/javascript";
+      adScript.innerHTML = `
+        atOptions = {
+          'key' : 'f881b838f9da39e1633519a531f6d15b',
+          'format' : 'iframe',
+          'height' : 90,
+          'width' : 728,
+          'params' : {}
+        };
+      `;
+      bannerContainer.appendChild(adScript);
+
+      const adLoaderScript = document.createElement("script");
+      adLoaderScript.type = "text/javascript";
+      adLoaderScript.src =
+        "//www.topcreativeformat.com/f881b838f9da39e1633519a531f6d15b/invoke.js";
+      bannerContainer.appendChild(adLoaderScript);
     } catch (error) {
-      console.error("Error opening Adsterra ad:", error);
+      console.error("Error creating Adsterra banner ad:", error);
       throw error;
     }
   }

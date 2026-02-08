@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getPlatform } from '@/lib/platform';
-import AdSense from './AdSense';
+import AdsterraBanner from './AdsterraBanner';
 import AdMob from './AdMob';
 
 const AdContainer: React.FC = () => {
@@ -11,7 +11,7 @@ const AdContainer: React.FC = () => {
   }, []);
 
   if (platform === 'web') {
-    return <AdSense />;
+    return <AdsterraBanner />;
   }
 
   if (platform === 'mobile') {
