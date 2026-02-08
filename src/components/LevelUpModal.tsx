@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/LevelUpModal.tsx
 import { useState } from "react";
 import { AdService } from "@/services/AdService";

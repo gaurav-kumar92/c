@@ -1,3 +1,5 @@
+'use client';
+
 export function HowToPlay({ onStart }: { onStart: () => void }) {
   return (
     <div className="absolute inset-0 bg-slate-900 bg-opacity-90 flex items-center justify-center z-50 p-4">
